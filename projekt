@@ -1,0 +1,42 @@
+#!/bin/bash
+echo "=== $(date --iso-8601=seconds) ==="
+df -h /
+[Unit]
+Description=Append disk usage to log
+Documentation=man:df(1)
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=reports
+ExecStart=/usr/local/bin/disk-report.sh
+StandardOutput=append:/var/log/disk-report.log
+StandardError=append:/var/log/disk-report.log
+[Unit]
+Description=Run disk-report daily
+Documentation=systemd.time(7)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+sudo cp disk-report.sh /usr/local/bin/disk-report.sh
+sudo chmod 755 /usr/local/bin/disk-report.sh
+
+sudo cp disk-report.service /etc/systemd/system/disk-report.service
+sudo cp disk-report.timer /etc/systemd/system/disk-report.timer
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now disk-report.timer
+
+systemctl list-timers disk-report.timer
+sudo systemctl start disk-report.service
+cat /var/log/disk-report.log
+systemctl show disk-report.service -p User
+
+systemctl is-enabled disk-report.service
+systemctl is-enabled disk-report.timer
+
+
